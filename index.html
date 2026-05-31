@@ -433,8 +433,10 @@ textarea{font-family:var(--sans);font-size:13px;resize:vertical;line-height:1.7}
 
   <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
     <button class="btn btn-ghost" style="flex:1" onclick="doExport()">↓ Export JSON</button>
+    <button class="btn btn-ghost" style="flex:1" onclick="doImport()">↑ Import JSON</button>
     <button class="btn btn-ghost" style="flex:1" onclick="doReset()">⟳ Reset</button>
   </div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
 </div>
 
@@ -1230,7 +1232,7 @@ window.delProd=function(i){S.products.splice(i,1);save();renderProds();};
 
 // ─── CHARTS ────────────────────────────────────────────────────────
 function renderCharts(){
-  const recent=S.days.slice(-28);
+  const recent=[...S.days].sort((a,b)=>a.date.localeCompare(b.date)).slice(-28);
   const lbl=recent.map(d=>d.date.slice(5));
   const baseOpts={
     responsive:true,maintainAspectRatio:false,
@@ -1371,6 +1373,30 @@ window.doExport=function(){
   a.href=URL.createObjectURL(b);
   a.download='dropshipping-os-'+todayStr()+'.json';
   a.click();
+};
+window.doImport=function(){
+  document.getElementById('importFile').value='';
+  document.getElementById('importFile').click();
+};
+window.handleImport=function(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!imported.days||!Array.isArray(imported.days))throw new Error('Ungültige Datei');
+      S={...S,...imported};
+      if(!S.dailyTasks)S.dailyTasks={};
+      if(!S.dailyNotes)S.dailyNotes={};
+      save();
+      render();
+      toast('✅ Daten erfolgreich importiert!');
+    }catch(err){
+      toast('❌ Fehler beim Import – falsche Datei?');
+    }
+  };
+  reader.readAsText(file);
 };
 window.doReset=function(){
   if(!confirm('Wirklich alles zurücksetzen?'))return;
